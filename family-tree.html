@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gia Phả - Họ Nguyễn</title>
+    <style>
+        :root {
+            --bg-family: #fcfbf7;
+            --border-traditional: #d4a373;
+            --node-bg: #fff6cc;
+            --node-text: #2c5e3b;
+            --line-color: #b23b3b; 
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Times New Roman', Times, serif, sans-serif; }
+        body { background-color: #e2d4c9; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* NAVBAR */
+        .navbar {
+            background-color: #3d2314; color: #f5f5f5; display: flex;
+            justify-content: space-between; align-items: center; padding: 0 20px; height: 50px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100; border-bottom: 2px solid var(--border-traditional);
+        }
+        .navbar .logo { font-size: 1.1rem; font-weight: bold; color: #f4d35e; letter-spacing: 1px; }
+        .nav-tabs { display: flex; height: 100%; }
+        .nav-tab {
+            padding: 0 20px; display: flex; align-items: center; color: #ccc;
+            text-decoration: none; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .nav-tab:hover { color: white; background-color: rgba(255,255,255,0.05); }
+        .nav-tab.active { color: #f4d35e; background-color: rgba(255,255,255,0.1); border-bottom: 3px solid #f4d35e; }
+
+        .tab-content { flex: 1; position: relative; overflow: hidden; width: 100%; }
+        .tab-panel { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .tab-panel.active { display: block; }
+
+        /* TAB 1: CÂY PHẢ HỆ VỚI THẺ NGANG */
+        .tree-viewport { position: relative; width: 100%; height: 100%; background-color: var(--bg-family); cursor: grab; overflow: hidden; }
+        .tree-viewport:active { cursor: grabbing; }
+        .tree-canvas { position: absolute; transform-origin: 0 0; transition: transform 0.05s linear; padding: 80px; display: inline-block; background-color: #fffdf5; }
+        
+        .tree ul { padding-top: 30px; position: relative; display: flex; justify-content: center; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 30px 10px 0 10px; transition: all 0.3s; }
+        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid var(--line-color); width: 50%; height: 30px; }
+        .tree li::after { right: auto; left: 50%; border-left: 2px solid var(--line-color); }
+        .tree li:only-child::after, .tree li:only-child::before { display: none; }
+        .tree li:only-child { padding-top: 0; }
+        .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+        .tree li:last-child::after { border-left: 2px solid var(--line-color); border-radius: 4px 0 0 0; }
+        .tree li:first-child::after { border-radius: 0 4px 0 0; }
+        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid var(--line-color); width: 0; height: 30px; }
+
+        .couple-wrapper { display: inline-flex; flex-direction: column; gap: 2px; background-color: #ebdcb9; padding: 4px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; cursor: pointer; min-width: 140px; }
+        .couple-wrapper:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.2); background-color: var(--border-traditional); }
+        .member-node { background-color: var(--node-bg); border: 1px solid #cca43b; color: var(--node-text); padding: 6px 10px; font-size: 0.9rem; font-weight: bold; text-align: center; border-radius: 4px; white-space: nowrap; }
+        .member-node.spouse { background-color: #ffffff; color: #444; border-color: #cbd5e1; font-weight: normal; }
+        
+        .node-toggle-btn { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); background: var(--line-color); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: flex; align-items: center; justify-content: center; z-index: 5; box-shadow: 0 1px 4px rgba(0,0,0,0.3); font-weight: bold; }
+        .collapsed ul { display: none !important; }
+        .couple-wrapper.has-children-closed { border: 2px solid var(--line-color); background-color: #ffcccc; }
+        .hud-instructions { position: absolute; bottom: 15px; left: 15px; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 4px; font-size: 0.75rem; color: #444; border: 1px solid var(--border-traditional); z-index: 10; pointer-events: none; }
+
+        /* TAB 2: NÂNG CẤP TOÀN DIỆN VÙNG QUẢN LÝ (ADMIN) */
+        .admin-view { padding: 25px; height: 100%; overflow-y: auto; background-color: #f4ece1; }
+        .admin-layout { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1500px; margin: 0 auto; }
+        @media (max-width: 1024px) { .admin-layout { grid-template-columns: 1fr; } }
+        
+        .card { background: #fff; padding: 15px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-top: 4px solid #3d2314; height: fit-content; }
+        .card h2 { color: #3d2314; font-size: 1.1rem; margin-bottom: 12px; border-bottom: 1px solid #e2d4c9; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Bộ lọc Filter đặt ở tiêu đề bảng */
+        .filter-select { padding: 4px 8px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; font-family: sans-serif; font-weight: normal; }
+        
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 3px; font-size: 0.8rem; }
+        .form-control { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; }
+        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+        .btn-primary { background-color: #3d2314; color: white; }
+        .btn-secondary { background-color: #e2d4c9; color: #333; }
+        
+        /* Kiểu dáng Table danh sách nâng cấp */
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #ebdcb9; }
+        th { background-color: #3d2314; color: #f4d35e; font-weight: bold; }
+        
+        /* Huy hiệu nhãn đời (Generation Tag) */
+        .gen-badge { display: inline-block; padding: 2px 6px; background-color: #2c5e3b; color: white; border-radius: 3px; font-size: 0.75rem; font-weight: bold; font-family: sans-serif; }
+        .parent-tag { font-size: 0.8rem; color: #666; font-style: italic; }
+        
+        .action-btns button { padding: 4px 8px; margin-right: 3px; border: none; border-radius: 3px; cursor: pointer; color: white; font-size: 0.75rem; font-weight: bold; }
+        .btn-edit { background-color: #eab308; }
+        .btn-delete { background-color: var(--danger-color); }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div class="logo">📜 GIA PHẢ DÒNG HỌ</div>
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('tab-tree', this)">Trang Chủ (Xem Sơ Đồ)</div>
+            <div class="nav-tab" onclick="switchTab('tab-admin', this)">⚙️ Quản Lý Thành Viên</div>
+        </div>
+    </div>
+
+    <div class="tab-content">
+        <!-- TAB 1: HIỂN THỊ CÂY PHẢ HỆ -->
+        <div id="tab-tree" class="tab-panel active">
+            <div class="tree-viewport" id="viewport">
+                <div class="hud-instructions">
+                    <strong>🖱️ Cuộn chuột:</strong> Phóng to/Thu nhỏ | <strong>🖐️ Giữ kéo chuột:</strong> Di chuyển bản đồ<br>
+                    <strong>👆 Click vào khối để Đóng hoặc Mở nhanh thế hệ sau</strong>
+                </div>
+                <div class="tree-canvas" id="canvas">
+                    <div class="tree" id="tree-root"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: QUẢN LÝ THÀNH VIÊN ĐÃ ĐƯỢC NÂNG CẤP -->
+        <div id="tab-admin" class="tab-panel">
+            <div class="admin-view">
+                <div class="admin-layout">
+                    <!-- Khung Nhập Liệu -->
+                    <div class="card">
+                        <h2 id="form-title">Nhập Liệu Thành Viên</h2>
+                        <form id="member-form">
+                            <input type="hidden" id="member-id">
+                            <div class="form-group">
+                                <label>Họ và Tên *</label>
+                                <input type="text" id="fullName" class="form-control" required placeholder="Ví dụ: Phạm Ngọc Bá">
+                            </div>
+                            <div class="form-group">
+                                <label>Trực hệ thuộc dưới quyền ai? (Tên Cha / Mẹ)</label>
+                                <select id="parentId" class="form-control"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tên Vợ / Chồng đi kèm (Nếu có)</label>
+                                <input type="text" id="spouseName" class="form-control" placeholder="Ví dụ: Phạm Thiên Bắc">
+                            </div>
+                            <div class="form-group">
+                                <label>Ghi chú phụ (Năm sinh/mất...)</label>
+                                <input type="text" id="lifeStatus" class="form-control" placeholder="Để hiển thị thêm thông tin">
+                            </div>
+                            <div class="btn-group">
+                                <button type="submit" id="btn-save" class="btn btn-primary">Lưu Lại</button>
+                                <button type="button" id="btn-cancel" class="btn btn-secondary" style="display:none;" onclick="resetForm()">Hủy</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Khung Danh Sách Cải Tiến Có Bộ Lọc & Tính Đời -->
+                    <div class="card">
+                        <h2>
+                            <span>Danh Sách Thành Viên Dòng Họ</span>
+                            <!-- BỘ LỌC THỜI GIAN THỰC THEO ĐỜI THẾ HỆ -->
+                            <select id="generation-filter" class="filter-select" onchange="renderTableOnly()">
+                                <option value="all">-- Xem tất cả các đời --</option>
+                            </select>
+                        </h2>
+                        <div style="overflow-x: auto; max-height: 530px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 80px; text-align: center;">Thế Hệ</th>
+                                        <th>Họ và Tên</th>
+                                        <th>Cha/Mẹ trực hệ (Đời trước)</th>
+                                        <th>Vợ/Chồng phối ngẫu</th>
+                                        <th>Ghi chú</th>
+                                        <th style="width: 120px;">Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // Dữ liệu mẫu gốc
+    let defaultData = [
+        { id: "1", fullName: "PHẠM NGỌC BÁ", parentId: "", spouseName: "PHẠM THIÊN BẮC", lifeStatus: "1823-1900" },
+        { id: "2_1", fullName: "PHẠM XUÂN TÙNG", parentId: "1", spouseName: "VŨ LẠI ĐÌNH HIỀN", lifeStatus: "" },
+        { id: "2_2", fullName: "PHẠM THÁI BÌNH", parentId: "1", spouseName: "LÝ CÔNG TỬ TỶ ĐỀ", lifeStatus: "" },
+        { id: "3_1", fullName: "VŨ THÀNH NGỌC", parentId: "2_1", spouseName: "BÙI THỊ NGỌC HOA", lifeStatus: "" },
+        { id: "3_2", fullName: "VŨ VĂN ĐỨC", parentId: "2_1", spouseName: "BÙI MINH ĐẠI", lifeStatus: "" },
+        { id: "3_3", fullName: "NGUYỄN VĂN TÍNH", parentId: "2_1", spouseName: "LÝ THỊ PHƯƠNG", lifeStatus: "" },
+        { id: "3_4", fullName: "PHẠM MẠNH HIẾU", parentId: "2_1", spouseName: "MẠT THỊ NINH", lifeStatus: "" },
+        { id: "3_5", fullName: "NGÔ THỊ ĐÔNG", parentId: "2_1", spouseName: "", lifeStatus: "" },
+        { id: "3_6", fullName: "HOÀNG ĐÌNH LINH", parentId: "2_2", spouseName: "ĐINH THỊ BÍCH", lifeStatus: "" },
+        { id: "3_7", fullName: "PHẠM THỊ THANH", parentId: "2_2", spouseName: "", lifeStatus: "" },
+        { id: "4_1", fullName: "VŨ KHẮC TĂNG", parentId: "3_1", spouseName: "", lifeStatus: "" },
+        { id: "4_2", fullName: "VŨ TIẾN TIẾN", parentId: "3_1", spouseName: "", lifeStatus: "" },
+        { id: "4_3", fullName: "PHẠM THỊ HẠNH", parentId: "3_3", spouseName: "", lifeStatus: "" },
+        { id: "4_4", fullName: "PHẠM THỊ MINH", parentId: "3_3", spouseName: "", lifeStatus: "" }
+    ];
+
+    let members = JSON.parse(localStorage.getItem('horizontalTreeDataV4')) || defaultData;
+    if(!localStorage.getItem('horizontalTreeDataV4')) {
+        localStorage.setItem('horizontalTreeDataV4', JSON.stringify(members));
+    }
+
+    let collapsedNodes = []; 
+
+    const viewport = document.getElementById('viewport');
+    const canvas = document.getElementById('canvas');
+    const treeRoot = document.getElementById('tree-root');
+    const form = document.getElementById('member-form');
+    const tableBody = document.getElementById('table-body');
+    const selectParent = document.getElementById('parentId');
+    const genFilter = document.getElementById('generation-filter');
+
+    let zoom = 1.0; let panX = 400; let panY = 60;
+
+    // THUẬT TOÁN ĐỆ QUY TÌM ĐỜI THỨ MẤY CỦA THÀNH VIÊN (Dò ngược từ con lên cha)
+    function calculateGeneration(memberId) {
+        let current = members.find(m => m.id === memberId);
+        if (!current) return 1;
+        let gen = 1;
+        while (current && current.parentId) {
+            gen++;
+            current = members.find(m => m.id === current.parentId);
+        }
+        return gen;
+    }
+
+    function switchTab(tabId, tabElement) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        tabElement.classList.add('active');
+        if(tabId === 'tab-tree') applyTransform();
+    }
+
+    // PAN & ZOOM NỀN
+    let isDragging = false; let startX, startY;
+    viewport.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.couple-wrapper')) return;
+        isDragging = true; startX = e.clientX - panX; startY = e.clientY - panY;
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return; panX = e.clientX - startX; panY = e.clientY - startY; applyTransform();
+    });
+    window.addEventListener('mouseup', () => isDragging = false);
+    viewport.addEventListener('wheel', (e) => {
+        if (!document.getElementById('tab-tree').classList.contains('active')) return;
+        e.preventDefault();
+        const intensity = 0.05;
+        if (e.deltaY < 0) zoom += intensity; else zoom -= intensity;
+        zoom = Math.min(Math.max(0.2, zoom), 2.5);
+        applyTransform();
+    }, { passive: false });
+
+    function applyTransform() { canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`; }
+    
+    function toggleNode(id) {
+        const index = collapsedNodes.indexOf(id);
+        if (index === -1) collapsedNodes.push(id); else collapsedNodes.splice(index, 1);
+        renderTreeOnly();
+    }
+
+    // DỰNG SƠ ĐỒ CÂY (Giữ nguyên giao diện bạn đã ưng ý)
+    function buildTreeHTML(parentId) {
+        const children = members.filter(m => m.parentId === parentId);
+        if (children.length === 0) return '';
+        let html = '<ul>';
+        children.forEach(child => {
+            const hasChildren = members.some(m => m.parentId === child.id);
+            const isCollapsed = collapsedNodes.includes(child.id);
+            let wrapperClass = isCollapsed ? 'couple-wrapper has-children-closed' : 'couple-wrapper';
+            let badge = hasChildren ? `<div class="node-toggle-btn">${isCollapsed ? '＋' : '─'}</div>` : '';
+            let spouseHTML = child.spouseName ? `<div class="member-node spouse">${child.spouseName}</div>` : '';
+            html += `
+                <li class="${isCollapsed ? 'collapsed' : ''}">
+                    <div class="${wrapperClass}" onclick="toggleNode('${child.id}')">
+                        <div class="member-node">${child.fullName}</div>
+                        ${spouseHTML}
+                        ${badge}
+                    </div>
+                    ${buildTreeHTML(child.id)}
+                </li>`;
+        });
+        return html + '</ul>';
+    }
+
+    function renderTreeOnly() {
+        const rootMembers = members.filter(m => !m.parentId);
+        if (rootMembers.length === 0) { treeRoot.innerHTML = '<div>Trống</div>'; return; }
+        let treeHTML = '<ul>';
+        rootMembers.forEach(root => {
+            const hasChildren = members.some(m => m.parentId === root.id);
+            const isCollapsed = collapsedNodes.includes(root.id);
+            let badge = hasChildren ? `<div class="node-toggle-btn">${isCollapsed ? '＋' : '─'}</div>` : '';
+            treeHTML += `
+                <li class="${isCollapsed ? 'collapsed' : ''}">
+                    <div class="${isCollapsed ? 'couple-wrapper has-children-closed' : 'couple-wrapper'}" onclick="toggleNode('${root.id}')">
+                        <div class="member-node">${root.fullName}</div>
+                        ${root.spouseName ? `<div class="member-node spouse">${root.spouseName}</div>` : ''}
+                        ${badge}
+                    </div>
+                    ${buildTreeHTML(root.id)}
+                </li>`;
+        });
+        treeRoot.innerHTML = treeHTML + '</ul>';
+    }
+
+    // ⚙️ CẬP NHẬT LOGIC MỚI CHO BẢNG QUẢN LÝ (DÀNH CHO ADMIN)
+    function updateParentDropdownAndFilters() {
+        // 1. Cập nhật ô chọn cha mẹ trong Form
+        selectParent.innerHTML = '<option value="">-- Là Đời 1 (Cụ Tổ / Gốc) --</option>';
+        
+        // Sắp xếp danh sách lựa chọn cha mẹ theo Đời từ thấp lên cao giúp giao diện dễ chọn hơn
+        let sortedMembers = [...members].sort((a,b) => calculateGeneration(a.id) - calculateGeneration(b.id));
+        
+        sortedMembers.forEach(m => {
+            let gen = calculateGeneration(m.id);
+            selectParent.innerHTML += `<option value="${m.id}">[Đời ${gen}] ${m.fullName}</option>`;
+        });
+
+        // 2. Tìm tổng số Đời hiện có trong dòng tộc để sinh Bộ Lọc (Filter) tự động
+        let maxGen = 1;
+        members.forEach(m => {
+            let gen = calculateGeneration(m.id);
+            if (gen > maxGen) maxGen = gen;
+        });
+
+        // Giữ lại lựa chọn hiện tại của người dùng trước khi vẽ lại dropdown filter
+        let currentFilterValue = genFilter.value || "all";
+        genFilter.innerHTML = '<option value="all">-- Xem tất cả các đời --</option>';
+        for (let i = 1; i <= maxGen; i++) {
+            genFilter.innerHTML += `<option value="${i}">Chỉ xem Đời thứ ${i}</option>`;
+        }
+        genFilter.value = currentFilterValue;
+    }
+
+    function renderTableOnly() {
+        tableBody.innerHTML = '';
+        let selectedFilter = genFilter.value;
+
+        // Tiến hành duyệt danh sách và tính toán thông tin cấu trúc hiển thị
+        members.forEach(m => {
+            let currentGen = calculateGeneration(m.id);
+
+            // Nếu người dùng chọn xem một đời cụ thể, bỏ qua các đời khác
+            if (selectedFilter !== "all" && currentGen.toString() !== selectedFilter) {
+                return;
+            }
+
+            const parent = members.find(p => p.id === m.parentId);
+            let parentInfo = '-';
+            if (parent) {
+                let parentGen = calculateGeneration(parent.id);
+                parentInfo = `<span class="parent-tag">[Đời ${parentGen}]</span> <strong>${parent.fullName}</strong>`;
+            }
+
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align: center;"><span class="gen-badge">Đời ${currentGen}</span></td>
+                <td><strong>${m.fullName}</strong></td>
+                <td>${parentInfo}</td>
+                <td>${m.spouseName || '-'}</td>
+                <td><small style="color: #666;">${m.lifeStatus || ''}</small></td>
+                <td class="action-btns">
+                    <button type="button" class="btn-edit" onclick="editMember('${m.id}')">Sửa</button>
+                    <button type="button" class="btn-delete" onclick="deleteMember('${m.id}')">Xóa</button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const id = document.getElementById('member-id').value;
+        const fullName = document.getElementById('fullName').value.trim().toUpperCase(); 
+        const parentId = document.getElementById('parentId').value;
+        const spouseName = document.getElementById('spouseName').value.trim().toUpperCase();
+        const lifeStatus = document.getElementById('lifeStatus').value.trim();
+
+        if(id && parentId === id) { alert("Lỗi: Không thể chọn chính mình làm cha mẹ!"); return; }
+
+        if(id) {
+            const idx = members.findIndex(m => m.id === id);
+            if(idx !== -1) members[idx] = { id, fullName, parentId, spouseName, lifeStatus };
+        } else {
+            members.push({ id: Date.now().toString(), fullName, parentId, spouseName, lifeStatus });
+        }
+        
+        saveAndRefresh();
+        resetForm();
+    });
+
+    function editMember(id) {
+        const m = members.find(m => m.id === id); if(!m) return;
+        document.getElementById('member-id').value = m.id; document.getElementById('fullName').value = m.fullName;
+        document.getElementById('parentId').value = m.parentId; document.getElementById('spouseName').value = m.spouseName; document.getElementById('lifeStatus').value = m.lifeStatus;
+        document.getElementById('form-title').innerText = "Cập Nhật Thông Tin"; document.getElementById('btn-cancel').style.display = "inline-block";
+    }
+
+    function deleteMember(id) {
+        if(confirm("Xóa thành viên này sẽ đưa các con trực hệ của họ lên Đời 1 để không mất nhánh. Xác nhận xóa?")) {
+            members.forEach(m => { if(m.parentId === id) m.parentId = ""; });
+            members = members.filter(m => m.id !== id);
+            saveAndRefresh();
+        }
+    }
+
+    function resetForm() { form.reset(); document.getElementById('member-id').value = ''; document.getElementById('btn-cancel').style.display = "none"; document.getElementById('form-title').innerText = "Thêm Thành Viên Mới"; }
+
+    function saveAndRefresh() {
+        localStorage.setItem('horizontalTreeDataV4', JSON.stringify(members));
+        updateParentDropdownAndFilters(); 
+        renderTableOnly(); 
+        renderTreeOnly();
+    }
+
+    // KHỞI ĐỘNG HỆ THỐNG LẦN ĐẦU
+    updateParentDropdownAndFilters(); 
+    renderTableOnly(); 
+    renderTreeOnly(); 
+    applyTransform();
+</script>
+</body>
+</html>
